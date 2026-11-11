@@ -31,7 +31,7 @@ if not exist "%CF%" if not "%CF%"=="cloudflared" (
 
 set "LOG=%TEMP%\screencast-tunnel.log"
 if exist "%LOG%" del "%LOG%"
-start "screencast - tunel" /min "%CF%" tunnel --no-autoupdate --url http://localhost:3000 --logfile "%LOG%"
+start "screencast - tunel" /min "%CF%" tunnel --no-autoupdate --protocol http2 --url http://localhost:3000 --logfile "%LOG%"
 
 echo Abrindo o tunel publico (pode levar uns segundos)...
 set "URL="
