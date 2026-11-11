@@ -6,3 +6,6 @@ Thumbs.db
 .webhook
 *.log
 data.json
+.secret
+.mencoes
+data.json.tmp

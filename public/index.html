@@ -22,6 +22,7 @@
 
   <main class="flex-1 flex items-center justify-center px-4 py-12">
     <div class="w-full max-w-lg space-y-10">
+      <div id="account" class="flex flex-wrap items-center justify-center gap-2 min-h-[2.5rem]"></div>
       <header class="text-center space-y-4">
         <p class="font-jp text-fuchsia-300/80 tracking-[0.6em] text-sm">スクリーンキャスト</p>
         <h1 class="font-display text-5xl sm:text-6xl font-black">
@@ -60,6 +61,34 @@
   <script src="/js/fx.js"></script>
   <script src="/js/mascot.js"></script>
   <script src="/js/kittens.js"></script>
+  <script type="module">
+    import { getMe, getCatalog, logout, openAuthModal, renderUserBar } from '/js/account.js';
+
+    const bar = document.getElementById('account');
+    let me = null;
+    let catalog = null;
+    const guestChosen = () => { try { return localStorage.getItem('sc-guest') === '1'; } catch { return false; } };
+    const setGuest = (v) => { try { v ? localStorage.setItem('sc-guest', '1') : localStorage.removeItem('sc-guest'); } catch {} };
+
+    function askAccount() {
+      openAuthModal({
+        onAuth: (user) => { me = user; setGuest(false); render(); },
+        onGuest: () => setGuest(true),
+      });
+    }
+
+    function render() {
+      renderUserBar(bar, me, {
+        catalog,
+        onLogin: askAccount,
+        onLogout: async () => { await logout(); me = null; render(); },
+      });
+    }
+
+    [me, catalog] = await Promise.all([getMe(), getCatalog()]);
+    render();
+    if (!me && !guestChosen()) askAccount();
+  </script>
   <script>
     const input = document.getElementById('code');
     input.addEventListener('input', () => (input.value = input.value.toUpperCase().replace(/[^A-Z0-9]/g, '')));

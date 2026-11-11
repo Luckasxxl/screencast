@@ -2,6 +2,9 @@ const path = require('path');
 const http = require('http');
 const express = require('express');
 const { Server } = require('socket.io');
+const store = require('./store');
+const { createEconomy } = require('./economy');
+const { createAuthRouter, userIdFromCookieHeader, NAME_MAX } = require('./auth');
 
 const PORT = process.env.PORT || 3000;
 const EMPTY_ROOM_TTL = 30_000; // sala vazia sobrevive 30s (ex.: alguém deu F5)
@@ -20,12 +23,15 @@ const SKIP_POLL = { title: 'PULA ESSA CENA?', options: ['Sim, pula!', 'Não, fic
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
+const economy = createEconomy(io);
 
+app.set('trust proxy', 1); // atrás do túnel do Cloudflare: req.ip / https corretos
+app.use('/api', createAuthRouter({ economy, onUserChanged }));
 app.use(express.static(path.join(__dirname, 'public')));
 app.get('/health', (_req, res) => res.send('ok'));
 
 /**
- * code -> { members: Map<socketId, { name, live }>, timer }
+ * code -> { members: Map<socketId, { name, live, pet }>, timer, poll }
  * Qualquer membro pode transmitir. Cada par (transmissor -> espectador)
  * tem sua própria RTCPeerConnection; o servidor só roteia a sinalização.
  */
@@ -43,19 +49,30 @@ function generateCode() {
 }
 
 const normalize = (code) => String(code || '').trim().toUpperCase();
-const cleanName = (name) => String(name || '').replace(/\s+/g, ' ').trim().slice(0, 24) || 'Nakama';
+const cleanName = (name) => String(name || '').replace(/\s+/g, ' ').trim().slice(0, NAME_MAX) || 'Nakama';
+
+const memberInfo = (id, m) => ({ id, name: m.name, live: m.live, pet: m.pet || null });
 
 function memberList(room) {
-  return [...room.members].map(([id, m]) => ({ id, name: m.name, live: m.live }));
+  return [...room.members].map(([id, m]) => memberInfo(id, m));
 }
 
-function enterRoom(socket, code, name) {
+// Logado usa o nome e o pet da conta; convidado usa o nome digitado e não tem pet
+function identity(socket, typedName) {
+  const user = store.getUser(socket.data.userId);
+  return user ? { name: user.name, pet: user.pet } : { name: cleanName(typedName), pet: null };
+}
+
+function enterRoom(socket, code, typedName) {
   const room = rooms.get(code);
   clearTimeout(room.timer);
-  room.members.set(socket.id, { name, live: false });
+  const { name, pet } = identity(socket, typedName);
+  const member = { name, live: false, pet };
+  room.members.set(socket.id, member);
   socket.data.room = code;
   socket.join(code);
-  socket.to(code).emit('member-joined', { id: socket.id, name, live: false });
+  socket.to(code).emit('member-joined', memberInfo(socket.id, member));
+  economy.onEnterRoom(socket);
 
   if (room.poll) broadcastPoll(code); // novo membro vê a votação; os outros veem o novo total
 
@@ -152,13 +169,38 @@ function cleanText(s) {
   return typeof s === 'string' ? s.replace(/\s+/g, ' ').trim() : '';
 }
 
+// Nome/pet da conta mudaram: atualiza em todas as salas onde ela está e no perfil
+function onUserChanged(userId) {
+  const user = store.getUser(userId);
+  if (!user) return;
+  for (const s of io.sockets.sockets.values()) {
+    if (s.data.userId !== userId) continue;
+    const room = rooms.get(s.data.room);
+    const m = room && room.members.get(s.id);
+    if (m) {
+      m.name = user.name;
+      m.pet = user.pet;
+      io.to(s.data.room).emit('member-updated', memberInfo(s.id, m));
+    }
+  }
+  io.to('user:' + userId).emit('profile', economy.profile(user));
+}
+
 function sameRoom(a, b) {
   const room = rooms.get(io.sockets.sockets.get(a)?.data.room);
   return !!room && room.members.has(a) && room.members.has(b);
 }
 
+// Sessão: lê o cookie assinado do handshake (convidado = sem userId)
+io.use((socket, next) => {
+  socket.data.userId = userIdFromCookieHeader(socket.handshake.headers.cookie);
+  next();
+});
+
 io.on('connection', (socket) => {
   const reply = (ack) => (typeof ack === 'function' ? ack : () => {});
+  const user = economy.attach(socket);
+  if (user) socket.emit('profile', economy.profile(user));
 
   socket.on('create-room', (payload, ack) => {
     leaveRoom(socket);
@@ -185,8 +227,30 @@ io.on('connection', (socket) => {
     const room = rooms.get(socket.data.room);
     const me = room && room.members.get(socket.id);
     if (!me) return;
+    const account = store.getUser(socket.data.userId);
+    if (account) {
+      // Logado: o nome é salvo na conta (vale para todas as abas)
+      if (typeof name !== 'string' || !name.trim()) return;
+      account.name = cleanName(name);
+      store.save();
+      return onUserChanged(account.id);
+    }
     me.name = cleanName(name);
-    io.to(socket.data.room).emit('member-updated', { id: socket.id, name: me.name, live: me.live });
+    io.to(socket.data.room).emit('member-updated', memberInfo(socket.id, me));
+  });
+
+  // ---------- loja ----------
+
+  socket.on('shop-buy', (petId, ack) => {
+    const res = economy.buy(socket.data.userId, petId);
+    if (res.ok) onUserChanged(socket.data.userId);
+    reply(ack)(res);
+  });
+
+  socket.on('shop-equip', (petId, ack) => {
+    const res = economy.equip(socket.data.userId, petId);
+    if (res.ok) onUserChanged(socket.data.userId);
+    reply(ack)(res);
   });
 
   socket.on('start-broadcast', () => {
@@ -194,7 +258,7 @@ io.on('connection', (socket) => {
     const me = room && room.members.get(socket.id);
     if (!me || me.live) return;
     me.live = true;
-    socket.to(socket.data.room).emit('member-updated', { id: socket.id, name: me.name, live: true });
+    socket.to(socket.data.room).emit('member-updated', memberInfo(socket.id, me));
     // Pede ao transmissor uma offer para cada outro membro
     for (const id of room.members.keys()) {
       if (id !== socket.id) socket.emit('viewer-joined', { viewerId: id });
@@ -255,10 +319,12 @@ io.on('connection', (socket) => {
     room.poll = {
       id: ++pollSeq, kind, title, options, by: me.name,
       votes: new Map(), // socketId -> índice da opção (1 voto por pessoa, pode trocar)
+      paidVoters: new Set(), // contas que já ganharam moedas nesta votação
       endsAt: now + POLL_DURATION,
       timer: setTimeout(() => closePoll(code, 'timeout'), POLL_DURATION),
     };
     console.log(`[${code}] ${me.name} abriu votação: ${title}`);
+    economy.onPollOpen(socket);
     done({ ok: true, id: room.poll.id });
     broadcastPoll(code);
   });
@@ -273,6 +339,7 @@ io.on('connection', (socket) => {
     if (!payload || payload.id !== poll.id) return done({ ok: false, error: 'Essa votação já acabou.' });
     if (!Number.isInteger(option) || option < 0 || option >= poll.options.length) return done({ ok: false, error: 'Opção inválida.' });
     poll.votes.set(socket.id, option);
+    economy.onVote(socket, poll);
     done({ ok: true, option });
     broadcastPoll(code);
     checkAllVoted(code);
@@ -281,6 +348,16 @@ io.on('connection', (socket) => {
   socket.on('leave-room', () => leaveRoom(socket));
   socket.on('disconnect', () => leaveRoom(socket));
 });
+
+economy.startPresence((s) => {
+  const room = rooms.get(s.data.room);
+  return !!room && room.members.has(s.id);
+});
+
+// Salva data.json antes de sair (Ctrl+C, stop.sh, kill)
+for (const sig of ['SIGINT', 'SIGTERM']) {
+  process.on(sig, () => { store.flush(); process.exit(0); });
+}
 
 server.listen(PORT, () => {
   console.log(`screencast rodando em http://localhost:${PORT}`);

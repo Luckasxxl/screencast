@@ -1,6 +1,9 @@
 import { createPeer, ROOM_RE } from './rtc.js';
 import { SOUNDS, play, setVolume, unlock } from './sfx.js';
 import { initPoll } from './poll.js';
+import {
+  getMe, getCatalog, petIcon, logout, openAuthModal, renderUserBar, bumpCoins, openProfile, achievementToast,
+} from './account.js';
 
 const $ = (id) => document.getElementById(id);
 const ui = {
@@ -60,7 +63,11 @@ function renderMembers() {
     const name = document.createElement('span');
     name.className = 'truncate';
     name.textContent = m.name + (id === socket.id ? ' (você)' : '');
-    li.append(dot, name);
+    const pet = document.createElement('span');
+    pet.className = 'pet-icon';
+    pet.textContent = petIcon(catalog, m.pet);
+    pet.title = m.pet ? '' : 'Convidado';
+    li.append(dot, pet, name);
     if (m.live) {
       const tag = document.createElement('span');
       tag.className = 'ml-auto label text-rose-300';
@@ -334,7 +341,7 @@ function onJoined(res) {
   ui.joinPanel.classList.add('hidden');
   ui.roomUi.classList.remove('hidden');
   members.clear();
-  res.members.forEach((m) => members.set(m.id, { name: m.name, live: m.live }));
+  res.members.forEach((m) => members.set(m.id, { name: m.name, live: m.live, pet: m.pet }));
   renderMembers();
   setStatus('Na sala', 'live');
   if (localStream) socket.emit('start-broadcast'); // voltou após queda de conexão
@@ -421,8 +428,8 @@ socket.on('host-left', ({ id }) => {
 
 socket.on('viewer-left', ({ viewerId }) => closeOutgoing(viewerId));
 
-socket.on('member-joined', ({ id, name, live }) => {
-  members.set(id, { name, live });
+socket.on('member-joined', ({ id, name, live, pet }) => {
+  members.set(id, { name, live, pet });
   renderMembers();
   toast(`${name} entrou na sala ✦`);
 });
@@ -435,10 +442,10 @@ socket.on('member-left', ({ id, name }) => {
   toast(`${name} saiu da sala`);
 });
 
-socket.on('member-updated', ({ id, name, live }) => {
+socket.on('member-updated', ({ id, name, live, pet }) => {
   const before = members.get(id);
   if (live && before && !before.live && id !== socket.id) toast(`🔴 ${name} começou a transmitir!`);
-  members.set(id, { name, live });
+  members.set(id, { name, live, pet });
   incoming.get(id)?.tile.setLabel(name);
   renderMembers();
 });
@@ -511,10 +518,49 @@ initPoll(socket, $('poll'), {
 
 ui.name.value = myName;
 ui.name.addEventListener('change', () => {
-  myName = ui.name.value.trim().slice(0, 24) || myName;
+  myName = ui.name.value.trim().slice(0, 16) || myName;
   ui.name.value = myName;
-  store.set('sc-name', myName);
+  if (!me) store.set('sc-name', myName); // logado: o servidor salva na conta
   socket.emit('set-name', myName);
+});
+
+// ---------- conta (opcional) ----------
+
+let me = null;
+let catalog = null;
+let profilePanel = null;
+const accountBar = $('account');
+
+function renderAccount() {
+  renderUserBar(accountBar, me, {
+    catalog,
+    onLogin: () => openAuthModal({ onAuth: () => location.reload(), guestLabel: 'Continuar como convidado' }),
+    onLogout: async () => { await logout(); location.reload(); },
+    onProfile: () => {
+      profilePanel = openProfile({ socket, me, catalog, onChange: () => renderAccount() });
+    },
+  });
+}
+
+socket.on('profile', (p) => {
+  me = { ...(me || {}), ...p };
+  myName = me.name;
+  ui.name.value = myName;
+  renderAccount();
+  if (profilePanel && document.body.contains(document.querySelector('.modal-back'))) profilePanel.refresh(me);
+});
+
+socket.on('coins-update', ({ coins, delta, reason }) => {
+  if (!me) return;
+  me.coins = coins;
+  bumpCoins(accountBar, coins);
+  if (delta > 0) toast(`+${delta} 🪙 ${reason}`);
+  if (profilePanel && document.querySelector('.modal-back')) profilePanel.refresh(me);
+});
+
+socket.on('achievement', (a) => {
+  achievementToast(a);
+  if (me) me.achievements = { ...me.achievements, [a.key]: Date.now() };
 });
 
 ui.share.addEventListener('click', startShare);
@@ -556,5 +602,14 @@ window.addEventListener('beforeunload', () => socket.emit('leave-room'));
 
 // ---------- início ----------
 
-if (targetCode && !ROOM_RE.test(targetCode.toUpperCase())) showJoin('Nani?! Esse código de sala não é válido.');
-else socket.connect();
+(async () => {
+  // Carrega conta e catálogo antes de conectar (o socket usa o cookie da sessão)
+  [me, catalog] = await Promise.all([getMe(), getCatalog()]);
+  if (me) {
+    myName = me.name;
+    ui.name.value = myName;
+  }
+  renderAccount();
+  if (targetCode && !ROOM_RE.test(targetCode.toUpperCase())) showJoin('Nani?! Esse código de sala não é válido.');
+  else socket.connect();
+})();

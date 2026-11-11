@@ -63,6 +63,22 @@ O arquivo `.webhook` nunca vai para o git (está no `.gitignore`); não cole a U
 
 > O celular só **hospeda** o site. Para **transmitir a tela** use um navegador de computador (Chrome/Edge/Firefox); pelo celular dá para assistir e usar a mesa de sons.
 
+## Contas, moedas e conquistas
+
+Conta é **opcional**. Sem conta você entra numa sala só com o código e um nome de piloto, como antes.
+Com conta (email + senha, mínimo 6 caracteres) o app guarda moedas, pets e conquistas.
+
+- O email é só um identificador: nenhum email é enviado e não há confirmação.
+- Moedas (só logado, só dentro de uma sala): **+1 a cada 5 min**, **+2** por votação em que você vota, **+3** ao abrir uma votação (até 3 pagas por hora). Duas abas da mesma conta não ganham em dobro.
+- Loja com 5 pets (o primeiro é grátis), que aparecem ao lado do seu nome na lista de nakamas.
+- 6 conquistas: primeira sala, 10 votos, 1h em salas, 5 votações abertas, comprar um pet, entrar em 3 dias diferentes.
+- Na sala: **Perfil / Loja** no topo; **Sair** encerra a sessão.
+
+> ⚠️ **As contas ficam no `data.json` da máquina onde o servidor roda.** PC e celular (Termux) têm bancos separados: uma conta criada no PC não existe no celular e vice-versa. Para levar as contas junto, copie o `data.json` e o `.secret` (com o servidor desligado).
+
+Segurança: senhas com bcrypt (custo 10), sessão em cookie `httpOnly` + `SameSite=Lax` assinado com HMAC (`Secure` automático via HTTPS/túnel), limite de 10 tentativas de login/cadastro por IP a cada 10 min.
+O segredo da sessão vem de `SESSION_SECRET` ou é gerado em `.secret` na primeira execução. `data.json` e `.secret` nunca vão para o git.
+
 ## TURN
 
 Só com STUN, alguns pares atrás de NAT simétrico/rede corporativa não conectam (o viewer mostra "Conexão falhou"). Adicione um servidor TURN em `public/js/rtc.js`:
@@ -77,9 +93,14 @@ export const ICE_SERVERS = [
 ## Estrutura
 
 ```
-server.js            signaling: salas, membros ao vivo, offer/answer/ice por socket id, sons
-public/index.html    início: criar sala / entrar com código
-public/room.html     sala: grade de telas, membros, mesa de sons
+server.js            signaling: salas, membros ao vivo, offer/answer/ice por socket id, sons, votação
+auth.js              contas: /api/register, /api/login, /api/logout, /api/me, sessão em cookie assinado
+store.js             persistência em data.json (escrita atômica com debounce)
+economy.js           moedas, loja de pets e conquistas
+public/index.html    início: criar sala / entrar com código / entrar na conta
+public/room.html     sala: grade de telas, membros, votação, mesa de sons
+public/js/account.js modal de login, barra do usuário, Perfil/Loja
+public/js/poll.js    painel de votação
 public/host.html     redireciona para room.html (links antigos)
 public/viewer.html   redireciona para room.html (links antigos)
 public/js/rtc.js     ICE servers + helper de RTCPeerConnection

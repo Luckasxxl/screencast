@@ -359,3 +359,36 @@ input[type=range].neon-range { accent-color: #a855f7; }
 .skip-alert small { display: block; font-size: .3em; letter-spacing: .3em; margin-top: .8em; color: #fbcfe8; }
 @keyframes skip-fade { 0%, 75% { opacity: 1; } 100% { opacity: 0; } }
 @keyframes skip-shake { 25% { transform: translateX(-8px) rotate(-1deg); } 75% { transform: translateX(8px) rotate(1deg); } }
+
+/* ---------- Contas, loja e conquistas ---------- */
+.btn:disabled { opacity: .45; cursor: not-allowed; transform: none; filter: none; }
+.modal-back {
+  position: fixed; inset: 0; z-index: 80; display: grid; place-items: center; padding: 16px;
+  background: rgba(7, 2, 15, 0.78); backdrop-filter: blur(6px); animation: toast-in .2s ease-out;
+}
+.modal-box { width: 100%; max-width: 640px; max-height: calc(100vh - 32px); overflow: auto; background: rgba(20, 6, 40, 0.95); }
+.tab-on { background: linear-gradient(110deg, #7c3aed, #a855f7 45%, #d946ef); box-shadow: 0 0 18px rgba(168,85,247,.5); }
+.coin-chip {
+  display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px;
+  font-family: 'Orbitron', sans-serif; font-weight: 700; font-size: .8rem; color: #fde68a;
+  background: rgba(250, 204, 21, 0.08); border: 1px solid rgba(250, 204, 21, 0.4);
+  text-shadow: 0 0 8px rgba(250, 204, 21, .6);
+}
+.coin-chip.bump { animation: coin-bump .5s ease-out; }
+@keyframes coin-bump { 30% { transform: scale(1.25); box-shadow: 0 0 18px rgba(250,204,21,.7); } }
+.shop-card {
+  display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 12px 8px; text-align: center;
+  background: rgba(10, 2, 24, 0.6); border: 1px solid var(--line);
+}
+.shop-card.equipped { border-color: var(--magenta); box-shadow: 0 0 16px rgba(232, 121, 249, .45); }
+.ach-row { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border: 1px solid var(--line); background: rgba(10, 2, 24, .5); opacity: .55; }
+.ach-row.got { opacity: 1; border-color: rgba(250, 204, 21, .5); }
+.ach-toast {
+  position: fixed; left: 50%; top: 16px; transform: translateX(-50%); z-index: 90;
+  display: flex; align-items: center; gap: 12px; padding: 10px 18px;
+  background: rgba(24, 8, 48, 0.95); border: 1px solid rgba(250, 204, 21, .6);
+  box-shadow: 0 0 24px rgba(250, 204, 21, .35); animation: ach-in .35s ease-out, ach-out .4s ease-in 4.1s forwards;
+}
+@keyframes ach-in { from { transform: translate(-50%, -30px); opacity: 0; } }
+@keyframes ach-out { to { transform: translate(-50%, -30px); opacity: 0; } }
+.pet-icon { width: 1.4em; text-align: center; flex-shrink: 0; }
