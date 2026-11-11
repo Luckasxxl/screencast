@@ -1,6 +1,7 @@
 import { createPeer, ROOM_RE } from './rtc.js';
 import { SOUNDS, play, setVolume, unlock } from './sfx.js';
 import { initPoll } from './poll.js';
+import { toggleMiniplayer, closeMiniplayerFor } from './pip.js';
 import {
   getMe, getCatalog, petIcon, logout, openAuthModal, renderUserBar, bumpCoins, openProfile, achievementToast,
 } from './account.js';
@@ -118,6 +119,7 @@ function createTile(label, { local = false } = {}) {
       <span class="tile-name"></span>
       <div class="tile-tools">
         ${local ? '' : '<button class="tile-btn" data-act="sound" title="Ativar som">🔇</button>'}
+        <button class="tile-btn" data-act="pip" title="Miniplayer (janela sempre por cima)">⧉</button>
         <button class="tile-btn" data-act="fs" title="Tela cheia">⛶</button>
       </div>
     </div>`;
@@ -134,6 +136,8 @@ function createTile(label, { local = false } = {}) {
     } else if (act === 'fs') {
       if (document.fullscreenElement) document.exitFullscreen();
       else (tile.requestFullscreen?.() ?? video.webkitEnterFullscreen?.());
+    } else if (act === 'pip') {
+      toggleMiniplayer({ tileEl: tile, video, label: tile.querySelector('.tile-name').textContent, toast });
     }
   });
 
@@ -143,6 +147,7 @@ function createTile(label, { local = false } = {}) {
     soundBtn.textContent = video.muted ? '🔇' : '🔊';
     soundBtn.title = video.muted ? 'Ativar som' : 'Silenciar';
   };
+  video.addEventListener('volumechange', syncSoundBtn); // som mudado pelo miniplayer
 
   // Tenta tocar com som; se o navegador bloquear (autoplay), volta para mudo
   async function tryUnmute() {
@@ -165,6 +170,7 @@ function setOverlay(tile, text, spinner = true) {
 
 function removeTile(tile) {
   if (!tile) return;
+  closeMiniplayerFor(tile.el); // transmissão acabou: fecha o miniplayer dela
   tile.el.remove();
   updateLayout();
 }
