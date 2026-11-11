@@ -1,0 +1,17 @@
+{
+  "name": "screencast",
+  "version": "1.0.0",
+  "description": "Transmissão de tela P2P com WebRTC (Socket.io só para signaling)",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.21.2",
+    "socket.io": "^4.8.1"
+  }
+}

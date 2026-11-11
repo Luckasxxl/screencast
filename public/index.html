@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>screencast · スクリーンキャスト</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;900&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="/css/theme.css" />
+</head>
+<body class="flex flex-col min-h-screen">
+  <div class="kanji-bg" aria-hidden="true">画面共有</div>
+
+  <div class="ticker label text-[0.65rem]" aria-hidden="true">
+    <span>
+      ✦ PLUS ULTRA ✦ 領域展開 ✦ SYNC RATE 400% ✦ EL PSY KONGROO ✦ TATAKAE ✦ 夢を見ろ ✦ DATTEBAYO ✦ YARE YARE DAZE ✦ 1,000 YEARS OF NEON ✦ NAKAMA ONLINE ✦
+      ✦ PLUS ULTRA ✦ 領域展開 ✦ SYNC RATE 400% ✦ EL PSY KONGROO ✦ TATAKAE ✦ 夢を見ろ ✦ DATTEBAYO ✦ YARE YARE DAZE ✦ 1,000 YEARS OF NEON ✦ NAKAMA ONLINE ✦
+    </span>
+  </div>
+
+  <main class="flex-1 flex items-center justify-center px-4 py-12">
+    <div class="w-full max-w-lg space-y-10">
+      <header class="text-center space-y-4">
+        <p class="font-jp text-fuchsia-300/80 tracking-[0.6em] text-sm">スクリーンキャスト</p>
+        <h1 class="font-display text-5xl sm:text-6xl font-black">
+          <span class="glitch" data-text="SCREENCAST">SCREENCAST</span>
+        </h1>
+        <p class="text-violet-200/80 text-lg">
+          Compartilhe sua tela com seus <span class="text-fuchsia-300 font-semibold">nakamas</span>, ponto a ponto.<br />
+          Sem servidor no meio. Só conexão pura, estilo <span class="italic">telepatia Newtype</span>.
+        </p>
+      </header>
+
+      <section class="panel p-6 sm:p-8 space-y-6">
+        <a href="/room.html" class="btn btn-primary w-full text-lg">
+          ⚡ Criar sala e transmitir
+        </a>
+        <p class="label text-center -mt-2">領域展開 · Expansão de Domínio</p>
+
+        <div class="flex items-center gap-3 label">
+          <span class="h-px flex-1 bg-violet-500/30"></span>ou entre na sala<span class="h-px flex-1 bg-violet-500/30"></span>
+        </div>
+
+        <form id="join" class="flex gap-2">
+          <input id="code" maxlength="4" autocomplete="off" spellcheck="false" placeholder="XXXX"
+                 class="input-neon flex-1 min-w-0 px-4 py-3 text-2xl" aria-label="Código da sala" />
+          <button class="btn btn-ghost">Assistir</button>
+        </form>
+        <p id="error" class="text-sm text-rose-400 text-center min-h-[1.25rem]"></p>
+      </section>
+
+      <footer class="text-center label opacity-60">
+        WebRTC P2P · 接続準備完了 · Várias pessoas podem transmitir na mesma sala
+      </footer>
+    </div>
+  </main>
+
+  <script src="/js/fx.js"></script>
+  <script src="/js/mascot.js"></script>
+  <script src="/js/kittens.js"></script>
+  <script>
+    const input = document.getElementById('code');
+    input.addEventListener('input', () => (input.value = input.value.toUpperCase().replace(/[^A-Z0-9]/g, '')));
+    document.getElementById('join').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const code = input.value.trim().toUpperCase();
+      if (!/^[A-Z0-9]{4}$/.test(code)) {
+        document.getElementById('error').textContent = 'Nani?! O código tem 4 caracteres.';
+        return;
+      }
+      location.href = `/room.html?room=${code}`;
+    });
+  </script>
+</body>
+</html>
