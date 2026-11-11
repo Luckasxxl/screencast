@@ -65,14 +65,31 @@ function renderMembers() {
     name.textContent = m.name + (id === socket.id ? ' (você)' : '');
     const pet = document.createElement('span');
     pet.className = 'pet-icon';
-    pet.textContent = petIcon(catalog, m.pet);
-    pet.title = m.pet ? '' : 'Convidado';
+    const ghost = (m.ghostUntil || 0) > Date.now();
+    pet.textContent = ghost ? '👻' : petIcon(catalog, m.pet);
+    pet.title = ghost ? 'Nocauteado' : m.pet ? '' : 'Convidado';
+    if (ghost) name.classList.add('ghost-name');
     li.append(dot, pet, name);
+    if (id !== socket.id && !ghost) {
+      const ko = document.createElement('button');
+      ko.type = 'button';
+      ko.className = 'ko-btn';
+      ko.textContent = '💀';
+      ko.title = `Dar K.O. em ${m.name}`;
+      ko.setAttribute('aria-label', `Dar K.O. em ${m.name}`);
+      ko.addEventListener('click', () => {
+        unlock();
+        socket.emit('ko', id, (r) => r && !r.ok && toast(r.error));
+      });
+      li.append(ko);
+    }
     if (m.live) {
       const tag = document.createElement('span');
       tag.className = 'ml-auto label text-rose-300';
       tag.textContent = 'ao vivo';
-      li.append(tag);
+      const ko = li.querySelector('.ko-btn');
+      if (ko) ko.style.marginLeft = '0';
+      li.insertBefore(tag, ko); // "ao vivo" antes do 💀
     }
     return li;
   }));
@@ -455,6 +472,34 @@ socket.on('sfx', ({ id, name }) => {
   if (!s) return;
   if (!sfxMuted) play(id);
   toast(`${name}: ${s.emoji} ${s.label}`);
+});
+
+// ---------- K.O. (humor) ----------
+
+socket.on('ko', ({ target, text, sfx, ghostMs }) => {
+  const m = members.get(target);
+  if (m) {
+    m.ghostUntil = Date.now() + ghostMs;
+    setTimeout(renderMembers, ghostMs + 50); // volta à vida (isekai reverso)
+  }
+  renderMembers();
+
+  const isMe = target === socket.id;
+  const box = document.createElement('div');
+  box.className = 'ko-alert';
+  box.innerHTML = '<div><b>K.O.</b><span></span><small></small></div>';
+  box.querySelector('span').textContent = text;
+  box.querySelector('small').textContent = isMe ? 'VOCÊ FOI DE BASE 💀 · volta em 30s' : '💀 · 30s de fantasma';
+  document.body.append(box);
+  box.addEventListener('animationend', (e) => e.target === box && box.remove());
+
+  if (isMe) {
+    document.body.classList.remove('ko-me');
+    void document.body.offsetWidth;
+    document.body.classList.add('ko-me');
+    setTimeout(() => document.body.classList.remove('ko-me'), 3200);
+  }
+  if (!sfxMuted) play(sfx);
 });
 
 // ---------- mesa de sons ----------

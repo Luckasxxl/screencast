@@ -392,3 +392,27 @@ input[type=range].neon-range { accent-color: #a855f7; }
 @keyframes ach-in { from { transform: translate(-50%, -30px); opacity: 0; } }
 @keyframes ach-out { to { transform: translate(-50%, -30px); opacity: 0; } }
 .pet-icon { width: 1.4em; text-align: center; flex-shrink: 0; }
+
+/* ---------- K.O. (humor) ---------- */
+.ko-btn {
+  margin-left: auto; background: none; border: 1px solid transparent; cursor: pointer;
+  font-size: 1rem; line-height: 1; padding: 2px 6px; opacity: .55; transition: opacity .2s, border-color .2s, transform .1s;
+}
+.ko-btn:hover { opacity: 1; border-color: rgba(244, 63, 94, .6); box-shadow: 0 0 10px rgba(244, 63, 94, .4); }
+.ko-btn:active { transform: scale(.85); }
+.ghost-name { opacity: .45; text-decoration: line-through; }
+.ko-alert {
+  position: fixed; inset: 0; z-index: 75; display: grid; place-items: center; pointer-events: none;
+  background: radial-gradient(ellipse at center, rgba(0, 0, 0, .55), transparent 75%);
+  animation: skip-fade 3.6s ease-out forwards;
+}
+.ko-alert > div { text-align: center; padding: 0 16px; animation: ko-slam .35s cubic-bezier(.2, 1.6, .4, 1); }
+.ko-alert b {
+  display: block; font-family: 'Orbitron', sans-serif; font-weight: 900; font-size: clamp(4rem, 16vw, 10rem); line-height: 1;
+  color: #fff; text-shadow: 0 0 20px #f43f5e, 0 0 60px #d946ef, 6px 6px 0 #7c3aed;
+}
+.ko-alert span { display: block; margin-top: .6rem; font-size: clamp(1.1rem, 3.2vw, 1.8rem); font-weight: 700; color: #fde68a; text-shadow: 0 0 12px rgba(0,0,0,.9); }
+.ko-alert small { display: block; margin-top: .5rem; font-family: 'Orbitron', sans-serif; letter-spacing: .25em; font-size: .75rem; color: #fbcfe8; }
+@keyframes ko-slam { from { transform: scale(2.6) rotate(-8deg); opacity: 0; } }
+body.ko-me > *:not(.ko-alert) { animation: ko-gray 3.2s ease-out; }
+@keyframes ko-gray { 0%, 70% { filter: grayscale(1) brightness(.6); } 100% { filter: none; } }

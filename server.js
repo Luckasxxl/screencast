@@ -14,6 +14,19 @@ const SFX_IDS = new Set([
   'nani', 'omae', 'sugoi', 'yamete', 'kawaii', 'dattebayo', 'sixseven', 'meow', 'nya',
 ]);
 
+// K.O. de brincadeira entre nakamas ({f} = quem bateu, {t} = alvo)
+const KO_COOLDOWN = 15_000;
+const KO_GHOST_MS = 30_000;
+const KO_LINES = [
+  { text: 'Caminhão-kun mandou {t} para outro mundo 🚚✨', sfx: 'vineboom' },
+  { text: '{f}: "Omae wa mou shindeiru." — {t}: "NANI?!"', sfx: 'omae' },
+  { text: '{f} acertou um Rasengan em {t} 🌀', sfx: 'vineboom' },
+  { text: '{f} usou UM soco sério em {t} 👊', sfx: 'vineboom' },
+  { text: '{f} escreveu {t} no Death Note 📓', sfx: 'sadtrombone' },
+  { text: '{t} tropeçou no cabo do amplificador e saiu do palco 🎸', sfx: 'badumtss' },
+];
+const KO_KIKURI = { text: '{t} ficou sem saquê e apagou no meio do show 🍶💤', sfx: 'sadtrombone' };
+
 const POLL_DURATION = 60_000;
 const POLL_COOLDOWN = 3_000;
 const POLL_TITLE_MAX = 60;
@@ -285,6 +298,35 @@ io.on('connection', (socket) => {
     if (!me || !SFX_IDS.has(id) || now - (socket.data.lastSfx || 0) < SFX_COOLDOWN) return;
     socket.data.lastSfx = now;
     io.to(socket.data.room).emit('sfx', { id, from: socket.id, name: me.name });
+  });
+
+  // ---------- K.O. (humor) ----------
+
+  socket.on('ko', (targetId, ack) => {
+    const done = reply(ack);
+    const code = socket.data.room;
+    const room = rooms.get(code);
+    const me = room && room.members.get(socket.id);
+    const target = room && typeof targetId === 'string' && room.members.get(targetId);
+    const now = Date.now();
+    if (!me || !target) return done({ ok: false, error: 'Essa pessoa não está na sala.' });
+    if (targetId === socket.id) return done({ ok: false, error: 'Nada de autossabotagem, piloto.' });
+    if (now - (socket.data.lastKo || 0) < KO_COOLDOWN) {
+      return done({ ok: false, error: `Recarregando o golpe… ${Math.ceil((KO_COOLDOWN - (now - socket.data.lastKo)) / 1000)}s` });
+    }
+    if ((target.ghostUntil || 0) > now) return done({ ok: false, error: `${target.name} já é um fantasma 👻` });
+
+    socket.data.lastKo = now;
+    target.ghostUntil = now + KO_GHOST_MS;
+    const line = /kikuri|hiroi/i.test(target.name)
+      ? KO_KIKURI
+      : KO_LINES[Math.floor(Math.random() * KO_LINES.length)];
+    done({ ok: true });
+    io.to(code).emit('ko', {
+      from: socket.id, target: targetId, ghostMs: KO_GHOST_MS, sfx: line.sfx,
+      text: line.text.replaceAll('{f}', me.name).replaceAll('{t}', target.name),
+    });
+    console.log(`[${code}] ${me.name} deu K.O. em ${target.name}`);
   });
 
   // ---------- votação ----------
