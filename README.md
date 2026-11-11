@@ -41,11 +41,9 @@ O `cloudflared` imprime uma URL `https://xxxx.trycloudflare.com`. Abra nela o ho
 
 ```bash
 pkg update && pkg upgrade
-pkg install nodejs-lts git gh cloudflared
+pkg install nodejs-lts git cloudflared
 
-# repositório privado: faça login antes de clonar
-gh auth login
-gh repo clone Luckasxxl/screencast
+git clone https://github.com/Luckasxxl/screencast.git
 cd screencast
 npm install
 
