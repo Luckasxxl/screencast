@@ -37,7 +37,7 @@ O `cloudflared` imprime uma URL `https://xxxx.trycloudflare.com`. Abra nela o ho
    - **Start Command:** `npm start`
 4. Deploy. O Render define `PORT` automaticamente e fornece HTTPS (WebSocket funciona sem configuração extra).
 
-## Rodar num celular Android (Termux)
+## Rodar no Termux
 
 ```bash
 pkg update && pkg upgrade
@@ -47,18 +47,19 @@ git clone https://github.com/Luckasxxl/screencast.git
 cd screencast
 npm install
 
-termux-wake-lock          # impede o Android de dormir e matar o servidor
-npm start
+# opcional: avisar o link no Discord (Canal → Editar → Integrações → Webhooks → Copiar URL)
+cp .webhook.example .webhook
+nano .webhook              # troque o texto pela URL do webhook
+
+chmod +x start.sh stop.sh
+./start.sh
 ```
 
-Em outra sessão do Termux (deslize da borda esquerda → **New session**), abra o endereço público:
+O `start.sh` liga o wake lock, sobe o servidor e o túnel, mostra o link `https://xxxx.trycloudflare.com` e, se houver `.webhook`, manda o link no Discord.
+**Ctrl+C** desliga tudo; `./stop.sh` também (e libera o wake lock). Logs ficam em `server.log` e `tunnel.log`.
 
-```bash
-cloudflared tunnel --url http://localhost:3000
-```
-
-Compartilhe a URL `https://xxxx.trycloudflare.com` que aparecer. Ela muda toda vez que o túnel reinicia.
-Para atualizar depois: `git pull && npm install` e reinicie o `npm start`.
+O link muda toda vez que o túnel reinicia. Para atualizar o código: `git pull && npm install` e rode `./start.sh` de novo.
+O arquivo `.webhook` nunca vai para o git (está no `.gitignore`); não cole a URL dele em lugar nenhum público.
 
 > O celular só **hospeda** o site. Para **transmitir a tela** use um navegador de computador (Chrome/Edge/Firefox); pelo celular dá para assistir e usar a mesa de sons.
 
