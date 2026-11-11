@@ -1,5 +1,6 @@
 import { createPeer, ROOM_RE } from './rtc.js';
 import { SOUNDS, play, setVolume, unlock } from './sfx.js';
+import { initPoll } from './poll.js';
 
 const $ = (id) => document.getElementById(id);
 const ui = {
@@ -486,6 +487,25 @@ ui.sfxMute.addEventListener('click', () => {
   renderMute();
 });
 renderMute();
+
+// ---------- votação ----------
+
+function showSkipAlert(result) {
+  const yes = result.counts[0];
+  const box = document.createElement('div');
+  box.className = 'skip-alert';
+  box.innerHTML = '<div>⏭ PULA ESSA CENA!<small></small></div>';
+  box.querySelector('small').textContent = `${yes} de ${result.total} votaram sim`;
+  document.body.append(box);
+  box.addEventListener('animationend', (e) => e.target === box && box.remove());
+  play('airhorn');
+}
+
+initPoll(socket, $('poll'), {
+  isLive: () => !!localStream,
+  toast,
+  onSkipPassed: showSkipAlert,
+});
 
 // ---------- resto da UI ----------
 
