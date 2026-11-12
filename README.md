@@ -55,11 +55,38 @@ chmod +x start.sh stop.sh
 ./start.sh
 ```
 
-O `start.sh` liga o wake lock, sobe o servidor e o túnel, mostra o link `https://xxxx.trycloudflare.com` e, se houver `.webhook`, manda o link no Discord.
+O `start.sh` liga o wake lock, sobe o servidor e o túnel, mostra o link e, se houver `.webhook`, manda o link no Discord.
 **Ctrl+C** desliga tudo; `./stop.sh` também (e libera o wake lock). Logs ficam em `server.log` e `tunnel.log`.
+Para atualizar o código: `git pull && npm install` e rode `./start.sh` de novo.
 
-O link muda toda vez que o túnel reinicia. Para atualizar o código: `git pull && npm install` e rode `./start.sh` de novo.
-O arquivo `.webhook` nunca vai para o git (está no `.gitignore`); não cole a URL dele em lugar nenhum público.
+### Endereço fixo (localtunnel)
+
+Sem configuração, o túnel é o do Cloudflare e o link (`https://xxxx.trycloudflare.com`) muda a cada reinício.
+Para ter sempre o mesmo endereço, crie o arquivo `.subdominio` com o nome desejado:
+
+```bash
+cp .subdominio.example .subdominio   # contém "screencast-nakamas"
+nano .subdominio                     # 4 a 63 caracteres: letras minúsculas, números e hífen
+```
+
+Com `.subdominio`, o `start.sh` usa o **localtunnel** → `https://SEU-NOME.loca.lt`, reiniciando o túnel sozinho se ele cair.
+
+- Se o nome estiver ocupado (às vezes por alguns minutos depois de reiniciar), o loca.lt dá outro endereço; o script avisa com destaque na tela e no Discord e mostra o endereço real.
+- Na primeira visita, o loca.lt mostra uma página pedindo a **tunnel password**. O script mostra a senha e manda no Discord: os amigos digitam e pronto.
+  Essa senha é o **IP público** da rede onde o celular está, então só mande no Discord para quem você confia.
+- Apague o `.subdominio` para voltar ao Cloudflare.
+
+### Menções no Discord
+
+Crie `.mencoes` com quem deve ser marcado no aviso (uma ou mais linhas; linhas com `#` são ignoradas):
+
+```
+<@ID_DO_USUARIO> <@&ID_DO_CARGO>
+```
+
+(No Discord: Configurações → Avançado → Modo desenvolvedor; depois clique com o botão direito no usuário/cargo → Copiar ID.)
+
+Os arquivos `.webhook`, `.mencoes` e `.subdominio` nunca vão para o git; não cole a URL do webhook em lugar nenhum público.
 
 > O celular só **hospeda** o site. Para **transmitir a tela** use um navegador de computador (Chrome/Edge/Firefox); pelo celular dá para assistir e usar a mesa de sons.
 
