@@ -103,6 +103,21 @@ Com conta (email + senha, mínimo 6 caracteres) o app guarda moedas, pets e conq
 
 > ⚠️ **As contas ficam no `data.json` da máquina onde o servidor roda.** PC e celular (Termux) têm bancos separados: uma conta criada no PC não existe no celular e vice-versa. Para levar as contas junto, copie o `data.json` e o `.secret` (com o servidor desligado).
 
+### Trocar ou redefinir a senha
+
+- **Trocar:** na sala, **Perfil / Loja → Trocar senha** (senha atual + nova, mínimo 6 caracteres). Os outros aparelhos da conta são deslogados.
+- **Esqueceu a senha:** como não há e-mail, quem hospeda o servidor redefine pelo terminal:
+
+  ```bash
+  ./stop.sh                              # o servidor precisa estar parado
+  node reset-senha.js email@da.conta
+  ./start.sh
+  ```
+
+  O script gera uma senha temporária de 10 caracteres e a mostra **uma única vez**; passe para a pessoa em privado e peça para trocar no Perfil.
+  Ele se recusa a rodar com o servidor no ar (o servidor regrava o `data.json` e desfaria a mudança), guarda o estado anterior em `data.json.bak` e desloga as sessões antigas da conta.
+  Se o servidor usa outra porta, rode com `PORT=xxxx node reset-senha.js ...`.
+
 Segurança: senhas com bcrypt (custo 10), sessão em cookie `httpOnly` + `SameSite=Lax` assinado com HMAC (`Secure` automático via HTTPS/túnel), limite de 10 tentativas de login/cadastro por IP a cada 10 min.
 O segredo da sessão vem de `SESSION_SECRET` ou é gerado em `.secret` na primeira execução. `data.json` e `.secret` nunca vão para o git.
 
@@ -122,6 +137,7 @@ export const ICE_SERVERS = [
 ```
 server.js            signaling: salas, membros ao vivo, offer/answer/ice por socket id, sons, votação
 auth.js              contas: /api/register, /api/login, /api/logout, /api/me, sessão em cookie assinado
+reset-senha.js       redefine a senha de uma conta pelo terminal (servidor parado)
 store.js             persistência em data.json (escrita atômica com debounce)
 economy.js           moedas, loja de pets e conquistas
 public/index.html    início: criar sala / entrar com código / entrar na conta

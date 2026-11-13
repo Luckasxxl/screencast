@@ -238,6 +238,34 @@ export function openProfile({ socket, me, catalog, onChange }) {
       list.append(row);
     }
     body.append(list);
+    // Trocar senha
+    const pwBox = el('details', 'space-y-3');
+    const pwSum = el('summary', 'label cursor-pointer', 'Trocar senha · パスワード');
+    const pwForm = el('form', 'space-y-2 mt-3');
+    const mkPass = (ph, ac) => {
+      const i = el('input', 'input-neon poll-input w-full px-3 py-2');
+      i.type = 'password'; i.placeholder = ph; i.required = true; i.maxLength = 72; i.autocomplete = ac;
+      return i;
+    };
+    const pwCur = mkPass('Senha atual', 'current-password');
+    const pwNew = mkPass('Senha nova (mín. 6)', 'new-password');
+    pwNew.minLength = 6;
+    const pwBtn = el('button', 'btn btn-ghost btn-sm w-full', 'Trocar senha');
+    const pwMsg = el('p', 'text-sm min-h-[1.25rem]');
+    pwForm.append(pwCur, pwNew, pwBtn, pwMsg);
+    pwForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      pwBtn.disabled = true;
+      pwMsg.textContent = '';
+      const r = await api('POST', '/api/password', { current: pwCur.value, next: pwNew.value });
+      pwBtn.disabled = false;
+      pwMsg.className = `text-sm min-h-[1.25rem] ${r.ok ? 'text-emerald-400' : 'text-rose-400'}`;
+      pwMsg.textContent = r.ok ? 'Senha trocada! Os outros aparelhos foram deslogados.' : (r.error || 'Não deu certo.');
+      if (r.ok) pwForm.reset();
+    });
+    pwBox.append(pwSum, pwForm);
+    body.append(pwBox);
+
     body.append(el('p', 'text-xs text-violet-300/60',
       'Moedas (só logado, em sala): +1 a cada 5 min · +2 por votação em que você vota · +3 ao abrir votação (até 3 por hora).'));
   }

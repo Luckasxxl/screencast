@@ -10,3 +10,5 @@ data.json
 .mencoes
 data.json.tmp
 .subdominio
+data.json.bak
+.server.lock

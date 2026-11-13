@@ -38,8 +38,10 @@ const SECRET = loadSecret();
 
 const hmac = (v) => crypto.createHmac('sha256', SECRET).update(v).digest('base64url');
 
+// "v" é a versão da sessão da conta (user.sv): trocar/redefinir a senha invalida os cookies antigos
 function signSession(userId) {
-  const payload = Buffer.from(JSON.stringify({ u: userId, e: Date.now() + SESSION_DAYS * 864e5 })).toString('base64url');
+  const user = store.getUser(userId);
+  const payload = Buffer.from(JSON.stringify({ u: userId, v: (user && user.sv) || 0, e: Date.now() + SESSION_DAYS * 864e5 })).toString('base64url');
   return `${payload}.${hmac(payload)}`;
 }
 
@@ -51,8 +53,9 @@ function verifySession(token) {
   const given = Buffer.from(sig);
   if (expected.length !== given.length || !crypto.timingSafeEqual(expected, given)) return null;
   try {
-    const { u, e } = JSON.parse(Buffer.from(payload, 'base64url').toString());
-    return e > Date.now() && store.getUser(u) ? u : null;
+    const { u, v, e } = JSON.parse(Buffer.from(payload, 'base64url').toString());
+    const user = store.getUser(u);
+    return e > Date.now() && user && (v || 0) === (user.sv || 0) ? u : null;
   } catch {
     return null;
   }
@@ -179,6 +182,25 @@ function createAuthRouter({ economy, onUserChanged }) {
     store.save();
     onUserChanged(user.id);
     res.json({ ok: true, user: economy.profile(user) });
+  });
+
+  router.post('/password', requireJson, async (req, res) => {
+    const user = store.getUser(userIdFromCookieHeader(req.headers.cookie));
+    if (!user) return fail(res, 401, 'Não logado.');
+    if (rateLimited(req.ip)) return fail(res, 429, 'Muitas tentativas. Espere uns minutos e tente de novo.');
+    const current = typeof req.body.current === 'string' ? req.body.current.slice(0, 200) : '';
+    const next = req.body.next;
+    if (typeof next !== 'string' || next.length < PASS_MIN) return fail(res, 400, `A senha nova precisa de pelo menos ${PASS_MIN} caracteres.`);
+    if (Buffer.byteLength(next) > PASS_MAX) return fail(res, 400, 'Senha longa demais.');
+    if (!(await bcrypt.compare(current, user.passHash))) return fail(res, 401, 'Senha atual incorreta.');
+    if (next === current) return fail(res, 400, 'A senha nova precisa ser diferente da atual.');
+
+    user.passHash = await bcrypt.hash(next, 10);
+    user.sv = (user.sv || 0) + 1; // desloga os outros aparelhos
+    store.save();
+    setSessionCookie(req, res, user.id); // mantém este aparelho logado
+    console.log(`auth: senha trocada (${user.id})`);
+    res.json({ ok: true });
   });
 
   return router;

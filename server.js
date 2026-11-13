@@ -1,4 +1,5 @@
 const path = require('path');
+const fs = require('fs');
 const http = require('http');
 const express = require('express');
 const { Server } = require('socket.io');
@@ -397,10 +398,15 @@ economy.startPresence((s) => {
 });
 
 // Salva data.json antes de sair (Ctrl+C, stop.sh, kill)
+// .server.lock (PID) avisa o reset-senha.js de que o servidor está no ar
+const LOCK_FILE = path.join(__dirname, '.server.lock');
+process.on('exit', () => { try { fs.unlinkSync(LOCK_FILE); } catch {} });
+
 for (const sig of ['SIGINT', 'SIGTERM']) {
   process.on(sig, () => { store.flush(); process.exit(0); });
 }
 
 server.listen(PORT, () => {
+  try { fs.writeFileSync(LOCK_FILE, String(process.pid)); } catch {}
   console.log(`screencast rodando em http://localhost:${PORT}`);
 });
