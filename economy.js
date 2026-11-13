@@ -17,6 +17,9 @@ const ACHIEVEMENTS = [
   { key: 'hour_1',     name: 'Maratonista',     desc: 'Acumular 1 hora em salas',           icon: '⏱' },
   { key: 'polls_5',    name: 'Democracia otaku', desc: 'Abrir 5 votações',                  icon: '📣' },
   { key: 'pet_buyer',  name: 'Domador',         desc: 'Comprar um pet',                     icon: '🐾' },
+  { key: 'game_win',   name: 'Gamer',           desc: 'Vencer um mini game',                icon: '🎮' },
+  { key: 'wins_10',    name: 'Imbatível',       desc: 'Vencer 10 mini games',               icon: '🏆' },
+  { key: 'lucky',      name: 'Sortudo',         desc: 'Girar a roleta diária',              icon: '🎡' },
   { key: 'days_3',     name: 'Frequentador',    desc: 'Entrar em 3 dias diferentes',        icon: '📅' },
 ];
 
@@ -25,6 +28,13 @@ const PRESENCE_TICK_MS = Math.min(15_000, COIN_EVERY_MS);
 const VOTE_REWARD = 2;
 const POLL_REWARD = 3;
 const PAID_POLLS_PER_HOUR = 3;
+const WIN_REWARD = 2;
+const PAID_WINS_PER_HOUR = 6;
+// Roleta diária: prêmio em moedas e peso (chance) de cada fatia
+const DAILY_PRIZES = [
+  { coins: 1, weight: 30 }, { coins: 5, weight: 15 }, { coins: 2, weight: 25 },
+  { coins: 8, weight: 7 }, { coins: 3, weight: 20 }, { coins: 15, weight: 3 },
+];
 
 const today = () => new Date().toLocaleDateString('en-CA'); // AAAA-MM-DD no fuso do servidor
 
@@ -36,7 +46,8 @@ function createEconomy(io) {
       name: user.name, email: user.email, coins: user.coins,
       pet: user.pet, pets: user.pets,
       achievements: user.achievements,
-      stats: { votes: user.stats.votes, pollsOpened: user.stats.pollsOpened, roomSeconds: Math.floor(user.stats.roomSeconds), days: user.stats.days.length },
+      dailyReady: user.lastDaily !== today(),
+      stats: { wins: user.stats.wins || 0, votes: user.stats.votes, pollsOpened: user.stats.pollsOpened, roomSeconds: Math.floor(user.stats.roomSeconds), days: user.stats.days.length },
     };
   }
 
@@ -55,6 +66,8 @@ function createEconomy(io) {
     if (s.roomSeconds >= 3600) unlock(user, 'hour_1');
     if (s.pollsOpened >= 5) unlock(user, 'polls_5');
     if (s.days.length >= 3) unlock(user, 'days_3');
+    if (s.wins >= 1) unlock(user, 'game_win');
+    if (s.wins >= 10) unlock(user, 'wins_10');
   }
 
   function addCoins(user, amount, reason) {
@@ -112,6 +125,44 @@ function createEconomy(io) {
         store.save();
       }
       checkAchievements(user);
+    },
+
+    // Vitória em mini game: conta sempre; moedas até PAID_WINS_PER_HOUR por hora
+    onGameWin(socket) {
+      const user = store.getUser(socket && socket.data.userId);
+      if (!user) return;
+      user.stats.wins = (user.stats.wins || 0) + 1;
+      const hourAgo = Date.now() - 3600_000;
+      user.paidWins = (user.paidWins || []).filter((t) => t > hourAgo);
+      if (user.paidWins.length < PAID_WINS_PER_HOUR) {
+        user.paidWins.push(Date.now());
+        addCoins(user, WIN_REWARD, 'venceu o mini game');
+      } else {
+        store.save();
+      }
+      checkAchievements(user);
+      io.to(userRoom(user.id)).emit('profile', profile(user));
+    },
+
+    // Uma vez por dia (fuso do servidor). As moedas entram quando a roleta para de girar.
+    dailySpin(userId, spinMs) {
+      const user = store.getUser(userId);
+      if (!user) return { ok: false, error: 'Entre na sua conta para girar a roleta diária.' };
+      if (user.lastDaily === today()) return { ok: false, error: 'Você já girou hoje. Volte amanhã! 🌙' };
+      user.lastDaily = today();
+      let roll = Math.random() * DAILY_PRIZES.reduce((s, p) => s + p.weight, 0);
+      let winner = DAILY_PRIZES.findIndex((p) => (roll -= p.weight) < 0);
+      if (winner < 0) winner = 0;
+      // O saldo já fica salvo; só o aviso espera a roleta parar (não estraga a surpresa)
+      const prize = DAILY_PRIZES[winner].coins;
+      user.coins += prize;
+      store.save();
+      setTimeout(() => {
+        io.to(userRoom(user.id)).emit('coins-update', { coins: user.coins, delta: prize, reason: 'roleta diária' });
+        unlock(user, 'lucky');
+        io.to(userRoom(user.id)).emit('profile', profile(user));
+      }, spinMs);
+      return { ok: true, winner, options: DAILY_PRIZES.map((p) => `🪙 ${p.coins}`), spinMs };
     },
 
     buy(userId, petId) {

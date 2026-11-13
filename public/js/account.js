@@ -194,7 +194,7 @@ export function openProfile({ socket, me, catalog, onChange }) {
     body.append(head);
 
     const stats = el('p', 'text-sm text-violet-200/80');
-    stats.textContent = `${me.stats.votes} votos · ${me.stats.pollsOpened} votações abertas · ${fmtTime(me.stats.roomSeconds)} em sala · ${me.stats.days} dia(s)`;
+    stats.textContent = `${me.stats.wins || 0} vitórias · ${me.stats.votes} votos · ${me.stats.pollsOpened} votações abertas · ${fmtTime(me.stats.roomSeconds)} em sala · ${me.stats.days} dia(s)`;
     body.append(stats);
 
     // Loja

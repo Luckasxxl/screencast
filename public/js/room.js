@@ -1,6 +1,7 @@
 import { createPeer, ROOM_RE } from './rtc.js';
 import { SOUNDS, play, setVolume, unlock } from './sfx.js';
 import { initPoll } from './poll.js';
+import { initGames } from './games.js';
 import { toggleMiniplayer, closeMiniplayerFor } from './pip.js';
 import {
   getMe, getCatalog, petIcon, logout, openAuthModal, renderUserBar, bumpCoins, openProfile, achievementToast,
@@ -563,6 +564,15 @@ initPoll(socket, $('poll'), {
   isLive: () => !!localStream,
   toast,
   onSkipPassed: showSkipAlert,
+});
+
+// ---------- arcade: roleta, mini games e reações ----------
+
+initGames(socket, $('games'), {
+  toast,
+  sfx: (id) => { if (!sfxMuted) play(id); },
+  isLogged: () => !!me,
+  myId: () => socket.id,
 });
 
 // ---------- resto da UI ----------

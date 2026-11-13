@@ -5,6 +5,7 @@ const express = require('express');
 const { Server } = require('socket.io');
 const store = require('./store');
 const { createEconomy } = require('./economy');
+const { createGames } = require('./games');
 const { createAuthRouter, userIdFromCookieHeader, NAME_MAX } = require('./auth');
 
 const PORT = process.env.PORT || 3000;
@@ -50,6 +51,7 @@ app.get('/health', (_req, res) => res.send('ok'));
  * tem sua própria RTCPeerConnection; o servidor só roteia a sinalização.
  */
 const rooms = new Map();
+const games = createGames({ io, rooms, economy });
 
 // Sem 0/O/1/I para evitar confusão ao digitar o código
 const ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -118,6 +120,7 @@ function leaveRoom(socket) {
   socket.to(code).emit('viewer-left', { viewerId: socket.id });
   socket.to(code).emit('member-left', { id: socket.id, name });
   console.log(`[${code}] ${name} saiu (${room.members.size} na sala)`);
+  games.onLeave(code, socket.id);
 
   if (room.poll) {
     room.poll.votes.delete(socket.id);
@@ -387,6 +390,8 @@ io.on('connection', (socket) => {
     broadcastPoll(code);
     checkAllVoted(code);
   });
+
+  games.register(socket); // roleta, mini games e reações
 
   socket.on('leave-room', () => leaveRoom(socket));
   socket.on('disconnect', () => leaveRoom(socket));

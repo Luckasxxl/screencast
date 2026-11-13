@@ -427,3 +427,55 @@ body.ko-me > *:not(.ko-alert) { animation: ko-gray 3.2s ease-out; }
 .pip-placeholder p { font-family: 'Orbitron', sans-serif; letter-spacing: .2em; font-size: .8rem; text-transform: uppercase; }
 .btn-primary { overflow: hidden; } /* o brilho animado não pode gerar rolagem */
 .modal-box { overflow-x: hidden; }
+
+/* ---------- Arcade: roleta, mini games e reações ---------- */
+.game-back {
+  position: fixed; inset: 0; z-index: 78; display: grid; place-items: center; padding: 16px;
+  background: rgba(7, 2, 15, 0.72); backdrop-filter: blur(4px); animation: toast-in .2s ease-out;
+}
+.game-box { position: relative; width: 100%; max-width: 440px; max-height: calc(100vh - 32px); overflow: hidden auto; background: rgba(20, 6, 40, 0.96); }
+.game-close { position: absolute; top: 10px; right: 10px; z-index: 2; }
+
+.wheel-wrap { position: relative; width: min(100%, 340px, 52vh); aspect-ratio: 1; margin: 0 auto; }
+.wheel { width: 100%; height: 100%; border-radius: 50%; box-shadow: 0 0 0 4px #d946ef, 0 0 40px rgba(217, 70, 239, .55); }
+.wheel-pointer {
+  position: absolute; top: -10px; left: 50%; transform: translateX(-50%); width: 0; height: 0;
+  border-left: 14px solid transparent; border-right: 14px solid transparent; border-top: 28px solid #fde68a;
+  filter: drop-shadow(0 0 8px #f59e0b);
+}
+.wheel-result { min-height: 2.2rem; font-size: 1.5rem; color: #fde68a; opacity: .35; overflow-wrap: anywhere; }
+.wheel-result.show { opacity: 1; text-shadow: 0 0 18px #f59e0b; animation: ko-slam .35s cubic-bezier(.2, 1.6, .4, 1); }
+
+.reflex-pad {
+  width: 100%; height: 200px; border: 2px solid var(--violet-hot); cursor: pointer; user-select: none; touch-action: manipulation;
+  font-family: 'Orbitron', sans-serif; font-weight: 900; font-size: 2rem; color: #fff;
+}
+.reflex-pad.wait { background: #3b0764; }
+.reflex-pad.go { background: #16a34a; border-color: #86efac; box-shadow: 0 0 40px rgba(34, 197, 94, .7); }
+.reflex-pad.out { background: #7f1d1d; border-color: #fca5a5; cursor: not-allowed; }
+
+.rps-btn {
+  display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 14px 6px;
+  background: rgba(124, 58, 237, .18); border: 1px solid var(--line); transition: transform .1s, background .15s;
+}
+.rps-btn:hover:not(:disabled) { background: rgba(168, 85, 247, .35); transform: translateY(-2px); }
+.rps-btn:disabled { opacity: .45; cursor: not-allowed; }
+.rps-btn.mine { opacity: 1; border-color: #d946ef; box-shadow: 0 0 18px rgba(217, 70, 239, .6); }
+.rps-chip { padding: 4px 10px; border: 1px solid var(--line); background: rgba(124, 58, 237, .18); font-weight: 600; }
+.rps-chip.win { border-color: #fde68a; color: #fde68a; }
+
+.react-btn { font-size: 1.25rem; line-height: 1; padding: 6px 0; background: rgba(124, 58, 237, .15); border: 1px solid var(--line); transition: transform .1s; }
+.react-btn:hover { transform: scale(1.2); background: rgba(168, 85, 247, .35); }
+.react-btn:active { transform: scale(.9); }
+.reaction {
+  position: fixed; bottom: 60px; z-index: 65; pointer-events: none; display: flex; flex-direction: column; align-items: center;
+  animation: react-rise 2.6s ease-out forwards;
+}
+.reaction-emoji { font-size: 2.6rem; line-height: 1; filter: drop-shadow(0 0 10px rgba(217, 70, 239, .7)); }
+.reaction-name { font-size: .7rem; font-weight: 700; color: #f5d0fe; text-shadow: 0 0 6px #000; }
+@keyframes react-rise {
+  0% { transform: translate(0, 0) scale(.4); opacity: 0; }
+  15% { transform: translate(0, -40px) scale(1.15); opacity: 1; }
+  100% { transform: translate(var(--drift, 0), -55vh) scale(1); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) { .wheel { transition-duration: .01s !important; } }

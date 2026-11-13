@@ -90,6 +90,18 @@ Os arquivos `.webhook`, `.mencoes` e `.subdominio` nunca vão para o git; não c
 
 > O celular só **hospeda** o site. Para **transmitir a tela** use um navegador de computador (Chrome/Edge/Firefox); pelo celular dá para assistir e usar a mesa de sons.
 
+## Arcade: roleta, mini games e reações
+
+No painel **Arcade** da sala (funciona com ou sem conta):
+
+- **🎡 Roleta:** escreva uma pergunta e de 2 a 10 opções (uma por linha) e gire; todo mundo vê a mesma roleta parar no mesmo lugar. **🎯 Sortear nakama** gira com os nomes de quem está na sala.
+- **⚡ Reflexo:** a tela fica roxa e, depois de um tempo aleatório, verde. Quem clicar (ou apertar espaço) primeiro vence; quem clicar antes queima a largada.
+- **✊ Jokenpô:** todos escolhem pedra, papel ou tesoura em 10 s. Com as três jogadas (ou só uma) na mesa, dá empate.
+- **Reações:** os emojis no topo do painel sobem flutuando na tela de todo mundo.
+- **🎁 Roleta diária** (só com conta): uma vez por dia, vale de 1 a 15 moedas.
+
+Só um mini game por sala de cada vez. Vencer com 2 ou mais pessoas na sala dá **+2 moedas** (até 6 vitórias pagas por hora).
+
 ## Contas, moedas e conquistas
 
 Conta é **opcional**. Sem conta você entra numa sala só com o código e um nome de piloto, como antes.
@@ -98,7 +110,7 @@ Com conta (email + senha, mínimo 6 caracteres) o app guarda moedas, pets e conq
 - O email é só um identificador: nenhum email é enviado e não há confirmação.
 - Moedas (só logado, só dentro de uma sala): **+1 a cada 5 min**, **+2** por votação em que você vota, **+3** ao abrir uma votação (até 3 pagas por hora). Duas abas da mesma conta não ganham em dobro.
 - Loja com 5 pets (o primeiro é grátis), que aparecem ao lado do seu nome na lista de nakamas.
-- 6 conquistas: primeira sala, 10 votos, 1h em salas, 5 votações abertas, comprar um pet, entrar em 3 dias diferentes.
+- 9 conquistas: primeira sala, 10 votos, 1h em salas, 5 votações abertas, comprar um pet, entrar em 3 dias diferentes, vencer 1 e 10 mini games, girar a roleta diária.
 - Na sala: **Perfil / Loja** no topo; **Sair** encerra a sessão.
 
 > ⚠️ **As contas ficam no `data.json` da máquina onde o servidor roda.** PC e celular (Termux) têm bancos separados: uma conta criada no PC não existe no celular e vice-versa. Para levar as contas junto, copie o `data.json` e o `.secret` (com o servidor desligado).
@@ -140,10 +152,12 @@ auth.js              contas: /api/register, /api/login, /api/logout, /api/me, se
 reset-senha.js       redefine a senha de uma conta pelo terminal (servidor parado)
 store.js             persistência em data.json (escrita atômica com debounce)
 economy.js           moedas, loja de pets e conquistas
+games.js             arcade no servidor: roleta, roleta diária, reflexo, jokenpô e reações
 public/index.html    início: criar sala / entrar com código / entrar na conta
 public/room.html     sala: grade de telas, membros, votação, mesa de sons
 public/js/account.js modal de login, barra do usuário, Perfil/Loja
 public/js/poll.js    painel de votação
+public/js/games.js   painel do arcade (roleta, mini games, reações)
 public/host.html     redireciona para room.html (links antigos)
 public/viewer.html   redireciona para room.html (links antigos)
 public/js/rtc.js     ICE servers + helper de RTCPeerConnection
